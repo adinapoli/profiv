@@ -1,0 +1,12 @@
+[package]
+name = "provis"
+version = "0.1.0"
+authors = ["Alfredo Di Napoli <alfredo.dinapoli@gmail.com>"]
+
+[dependencies]
+clap = "=2.19.0"
+rustbox = "=0.9.0"
+
+[dependencies.nom]
+version = "=2.0.1"
+features = ["verbose-errors"]
