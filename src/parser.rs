@@ -7,7 +7,7 @@ use std::fs::File;
 use nom::{Err, IResult, Needed, is_space, space, is_digit, line_ending, not_line_ending};
 
 #[derive(Debug, PartialEq)]
-struct TotalTime {
+pub struct TotalTime {
     time: f32,
     ticks: u32,
     freq: u16,
@@ -15,12 +15,12 @@ struct TotalTime {
 }
 
 #[derive(Debug, PartialEq)]
-struct TotalAlloc {
+pub struct TotalAlloc {
     bytes: u64,
 }
 
 #[derive(Debug, PartialEq)]
-struct Header<'a> {
+pub struct Header<'a> {
     title: &'a str,
     program: &'a str,
     total_time: TotalTime,
@@ -28,10 +28,10 @@ struct Header<'a> {
 }
 
 #[derive(Debug, PartialEq)]
-struct Summary<'a>(Vec<SummaryLine<'a>>);
+pub struct Summary<'a>(Vec<SummaryLine<'a>>);
 
 #[derive(Debug, PartialEq)]
-struct SummaryLine<'a> {
+pub struct SummaryLine<'a> {
     cost_centre: &'a str,
     module: &'a str,
     time_perc: f32,
@@ -39,10 +39,10 @@ struct SummaryLine<'a> {
 }
 
 #[derive(Debug, PartialEq)]
-struct ExtendedSummary<'a>(Vec<ExtendedSummaryLine<'a>>);
+pub struct ExtendedSummary<'a>(Vec<ExtendedSummaryLine<'a>>);
 
 #[derive(Debug, PartialEq)]
-struct ExtendedSummaryLine<'a> {
+pub struct ExtendedSummaryLine<'a> {
     // indentation_level: u8, -- TODO
     cost_centre: &'a str,
     module: &'a str,
@@ -55,7 +55,7 @@ struct ExtendedSummaryLine<'a> {
 }
 
 #[derive(Debug, PartialEq)]
-struct GHCProf<'a> {
+pub struct GHCProf<'a> {
     header: Header<'a>,
     summary: Summary<'a>,
     extended_summary: ExtendedSummary<'a>,
@@ -210,7 +210,7 @@ named!(parse_header_and_summary<&[u8], (Header,Summary)>, do_parse!(
     ((h, summary))
 ));
 
-named!(parse_prof<&[u8], GHCProf>, do_parse!(
+named!(pub parse_prof<&[u8], GHCProf>, do_parse!(
     header_and_summary: parse_header_and_summary >>
     parse_summaries_sep >>
     extended_summary: parse_extended_summary >>
