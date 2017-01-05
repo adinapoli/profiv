@@ -1,5 +1,5 @@
 
-Profiv (__pro__file __v__isualiser) is a console-based GHC .prof file
+Profiv (__pro__ file __v__ isualiser) is a console-based GHC .prof file
 visualiser and parser written in Rust. **It's currently in alpha stage.**
 
 ![screen](https://cloud.githubusercontent.com/assets/442035/21699454/b62c8cdc-d393-11e6-8d2a-af57bbaf659e.png)
