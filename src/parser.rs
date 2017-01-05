@@ -8,34 +8,34 @@ use nom::{Err, IResult, Needed, is_space, space, is_digit, line_ending, not_line
 
 #[derive(Debug, PartialEq)]
 pub struct TotalTime {
-    time: f32,
-    ticks: u32,
-    freq: u16,
-    procs: u8,
+    pub time: f32,
+    pub ticks: u32,
+    pub freq: u16,
+    pub procs: u8,
 }
 
 #[derive(Debug, PartialEq)]
 pub struct TotalAlloc {
-    bytes: u64,
+    pub bytes: u64,
 }
 
 #[derive(Debug, PartialEq)]
 pub struct Header<'a> {
-    title: &'a str,
-    program: &'a str,
-    total_time: TotalTime,
-    total_alloc: TotalAlloc,
+    pub title: &'a str,
+    pub program: &'a str,
+    pub total_time: TotalTime,
+    pub total_alloc: TotalAlloc,
 }
 
-#[derive(Debug, PartialEq)]
-pub struct Summary<'a>(Vec<SummaryLine<'a>>);
+#[derive(Debug, Clone, PartialEq)]
+pub struct Summary<'a>(pub Vec<SummaryLine<'a>>);
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct SummaryLine<'a> {
-    cost_centre: &'a str,
-    module: &'a str,
-    time_perc: f32,
-    alloc_perc: f32,
+    pub cost_centre: &'a str,
+    pub module: &'a str,
+    pub time_perc: f32,
+    pub alloc_perc: f32,
 }
 
 #[derive(Debug, PartialEq)]
@@ -43,7 +43,7 @@ pub struct ExtendedSummary<'a>(Vec<ExtendedSummaryLine<'a>>);
 
 #[derive(Debug, PartialEq)]
 pub struct ExtendedSummaryLine<'a> {
-    // indentation_level: u8, -- TODO
+    indentation_level: usize,
     cost_centre: &'a str,
     module: &'a str,
     no: u32,
@@ -56,8 +56,8 @@ pub struct ExtendedSummaryLine<'a> {
 
 #[derive(Debug, PartialEq)]
 pub struct GHCProf<'a> {
-    header: Header<'a>,
-    summary: Summary<'a>,
+    pub header: Header<'a>,
+    pub summary: Summary<'a>,
     extended_summary: ExtendedSummary<'a>,
 }
 
@@ -160,7 +160,7 @@ named!(parse_summary<&[u8], Summary>, do_parse!(
 ));
 
 named!(parse_extended_summary_line<&[u8], ExtendedSummaryLine>, do_parse!(
-    opt!(space) >>
+    indentation_level: map!(opt!(space), |s: Option<_>| s.map_or(0, |k:&[u8]| k.len())) >>
     cost_centre: map_res!(take_till!(is_space), str::from_utf8) >>
         space >>
         module: map_res!(take_till!(is_space), str::from_utf8) >>
@@ -178,6 +178,7 @@ named!(parse_extended_summary_line<&[u8], ExtendedSummaryLine>, do_parse!(
         inherited_alloc_perc: parse_num >>
         line_ending >>
         (ExtendedSummaryLine{
+            indentation_level: indentation_level,
             cost_centre: cost_centre,
             module: module,
             no: no,
