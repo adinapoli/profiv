@@ -72,7 +72,7 @@ impl Temperature {
     fn from(temp_c: f32) -> Temperature {
         match temp_c {
             0.0...10.0 => Temperature::Cold,
-            10.1...85.0 => Temperature::Warm,
+            10.1...50.0 => Temperature::Warm,
             _ => Temperature::Hot,
         }
     }
