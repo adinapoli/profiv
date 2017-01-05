@@ -1,7 +1,7 @@
 extern crate rustbox;
 
-use self::rustbox::{RustBox, Color, Key};
-use parser::{Header, Summary, GHCProf};
+use self::rustbox::{Style, RustBox, Color, Key};
+use parser::{Header, Summary, SummaryLine, GHCProf};
 
 pub struct UI {
     ui: RustBox,
@@ -62,6 +62,57 @@ fn render_header<'a>(rustbox: &RustBox, header: &Header<'a>) {
     normal_line(rustbox, 1, 6, &total_alloc)
 }
 
+enum Temperature {
+    Hot,
+    Warm,
+    Cold,
+}
+
+impl Temperature {
+    fn from(temp_c: f32) -> Temperature {
+        match temp_c {
+            0.0...10.0 => Temperature::Cold,
+            10.1...85.0 => Temperature::Warm,
+            _ => Temperature::Hot,
+        }
+    }
+
+    // Monoidal append.
+    fn append(t1: &Temperature, t2: &Temperature) -> Temperature {
+        match (t1, t2) {
+            (&Temperature::Hot, _) => Temperature::Hot,
+            (_, &Temperature::Hot) => Temperature::Hot,
+            (&Temperature::Warm, _) => Temperature::Warm,
+            (_, &Temperature::Warm) => Temperature::Warm,
+            _ => Temperature::Cold,
+        }
+    }
+
+    fn to_style(&self) -> Style {
+        match *self {
+            Temperature::Cold => rustbox::RB_NORMAL,
+            Temperature::Warm => rustbox::RB_NORMAL,
+            Temperature::Hot => rustbox::RB_BOLD,
+        }
+    }
+
+    fn to_colour(&self) -> Color {
+        match *self {
+            Temperature::Cold => Color::White,
+            Temperature::Warm => Color::Yellow,
+            Temperature::Hot => Color::Red,
+        }
+    }
+}
+
+fn heat_line(rustbox: &RustBox, x: usize, y: usize, temp: &Temperature, str: &str) {
+    rustbox.print(x, y, temp.to_style(), temp.to_colour(), Color::Default, str);
+}
+
+fn styled_line(rustbox: &RustBox, x: usize, y: usize, temp: &Temperature, str: &str) {
+    rustbox.print(x, y, temp.to_style(), Color::White, Color::Default, str);
+}
+
 fn render_summary<'a>(rustbox: &RustBox, &Summary(ref lines): &Summary<'a>) {
     normal_line(rustbox, 1, 8, "COST CENTRE");
 
@@ -69,12 +120,15 @@ fn render_summary<'a>(rustbox: &RustBox, &Summary(ref lines): &Summary<'a>) {
     let mut lines_mut = lines.clone();
     lines_mut.sort_by(|a, b| b.cost_centre.len().cmp(&a.cost_centre.len()));
     let longest_cc = lines_mut.get(0).map_or(1, |v| v.cost_centre.len());
+
     lines_mut.sort_by(|a, b| b.module.len().cmp(&a.module.len()));
     let longest_mo = lines_mut.get(0).map_or(1, |v| v.module.len());
+
     lines_mut.sort_by(|a, b| (format!("{}", b.time_perc).len())
             .cmp(&format!("{}", a.time_perc).len()));
     let longest_tm = lines_mut.get(0).map_or(1, |v| (format!("{}", v.time_perc).len()));
 
+    // Render the rest of the summary header
     normal_line(rustbox, longest_cc + 2, 8, "MODULE");
     normal_line(rustbox, longest_cc + longest_mo + 4, 8, "%time");
     normal_line(rustbox,
@@ -85,6 +139,7 @@ fn render_summary<'a>(rustbox: &RustBox, &Summary(ref lines): &Summary<'a>) {
     let mut idx = 10;
 
     for line in lines {
+        let &SummaryLine { time_perc: time, alloc_perc: memory, .. } = line;
         let tm_str = format!("{}", line.time_perc);
         let cc_len = line.cost_centre.len();
         let cc_slack = longest_cc - cc_len;
@@ -92,16 +147,27 @@ fn render_summary<'a>(rustbox: &RustBox, &Summary(ref lines): &Summary<'a>) {
         let mo_slack = longest_mo - mo_len;
         let tm_len = tm_str.len();
         let tm_slack = longest_tm - tm_len;
-        normal_line(rustbox, 1, idx, line.cost_centre);
-        normal_line(rustbox, cc_len + cc_slack + 2, idx, line.module);
-        normal_line(rustbox,
-                    cc_len + cc_slack + mo_slack + mo_len + 4,
+
+        let time_temp = Temperature::from(time);
+        let memory_temp = Temperature::from(memory);
+        let combined_temp = Temperature::append(&time_temp, &memory_temp);
+
+        styled_line(rustbox, 1, idx, &combined_temp, line.cost_centre);
+        styled_line(rustbox,
+                    cc_len + cc_slack + 2,
                     idx,
-                    &tm_str);
-        normal_line(rustbox,
-                    cc_len + cc_slack + mo_slack + mo_len + tm_slack + tm_len + 6,
-                    idx,
-                    &format!("{}", line.time_perc));
+                    &combined_temp,
+                    line.module);
+        heat_line(rustbox,
+                  cc_len + cc_slack + mo_slack + mo_len + 4,
+                  idx,
+                  &time_temp,
+                  &tm_str);
+        heat_line(rustbox,
+                  cc_len + cc_slack + mo_slack + mo_len + tm_slack + tm_len + 6,
+                  idx,
+                  &memory_temp,
+                  &format!("{}", line.alloc_perc));
         idx += 1
     }
 }
