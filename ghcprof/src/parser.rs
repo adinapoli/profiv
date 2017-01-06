@@ -4,6 +4,15 @@ extern crate nom;
 use std::str;
 use nom::{IResult, Needed, is_space, space, is_digit, line_ending, not_line_ending};
 
+// Rose Tree
+
+#[derive(Debug, PartialEq)]
+struct RoseTree<T> {
+    depth: u32,
+    value: T,
+    sub_forest: Vec<RoseTree<T>>,
+}
+
 #[derive(Debug, PartialEq)]
 pub struct TotalTime {
     pub time: f32,
