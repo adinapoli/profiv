@@ -1,16 +1,14 @@
 
-#[macro_use] extern crate nom;
+extern crate ghcprof;
 
 mod cli;
 mod ui;
-mod parser;
 
 use ui::UI;
-use parser::parse_prof;
+use ghcprof::parser::parse_prof_file;
 use std::fs::File;
 use std::io::prelude::*;
 use std::process;
-use nom::{IResult};
 
 #[derive(Debug)]
 enum AppError {
@@ -46,8 +44,8 @@ fn run(args: cli::Args) -> Result<(), AppError> {
     let mut prof_file = try!(File::open(&file_path));
     let mut profile   = String::new();
     try!(prof_file.read_to_string(&mut profile));
-    match parse_prof(profile.as_bytes()) {
-        IResult::Done(_, prof) => {
+    match parse_prof_file(profile.as_bytes()) {
+        Some(prof) => {
             let ui = try!(UI::new());
             ui.render_loop(prof);
             Ok(())

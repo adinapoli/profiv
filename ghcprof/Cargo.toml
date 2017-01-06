@@ -1,12 +1,8 @@
 [package]
-name = "provis"
+name = "ghcprof"
 version = "0.1.0"
+description = "Parser for GHC .prof files"
 authors = ["Alfredo Di Napoli <alfredo.dinapoli@gmail.com>"]
-
-[dependencies]
-clap = "=2.19.0"
-rustbox = "=0.9.0"
-ghcprof = { version = "0.1.0", path = "ghcprof" }
 
 [dependencies.nom]
 version = "=2.0.1"
