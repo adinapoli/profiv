@@ -136,6 +136,30 @@ decryptBytes                                      Crypto.RNCryptor.V3.Decrypt   
 }
 
 #[test]
+fn can_parse_extended_summary() {
+    match parse_extended_summary("MAIN                                                           MAIN                                     559           0    0.3    0.0   100.0  100.0
+ arbitrary                                                     Tests                                   2302           0    0.0    0.0     5.6    3.5
+  arbitrary                                                    Data.ByteString.Arbitrary               2304           0    0.0    0.0     5.6    3.5
+   fastRandBs                                                  Data.ByteString.Arbitrary               2307           0    0.4    1.7     5.6    3.5
+    slowRandBs                                                 Data.ByteString.Arbitrary               2319           0    0.0    0.0     0.0    0.0
+    fastRandBs.preChunks                                       Data.ByteString.Arbitrary               2313         100    0.0    0.0     0.0    0.0
+    fastRandBs.hashes                                          Data.ByteString.Arbitrary               2312         100    5.3    1.7     5.3    1.7
+"
+        .as_bytes()) {
+        IResult::Done(leftover, ExtendedSummary(trees)) => {
+            assert_eq!(trees[0].depth, 0);
+            let ref line = trees[0].value;
+            assert_eq!(line.cost_centre, "MAIN");
+            assert_eq!("", str::from_utf8(leftover).unwrap());
+        },
+        IResult::Error(Err::Position(_, bytes)) => {
+            panic!("error char -> {:?}", str::from_utf8(bytes))
+        }
+        e => panic!("{:?}", e),
+    }
+}
+
+#[test]
 fn can_parse_summaries_sep() {
     match parse_summaries_sep("
                                                                                                                           individual     inherited

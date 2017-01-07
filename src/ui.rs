@@ -1,7 +1,8 @@
 extern crate rustbox;
+extern crate ghcprof;
 
 use self::rustbox::{Style, RustBox, Color, Key};
-use parser::{Header, Summary, SummaryLine, GHCProf};
+use ghcprof::parser::{Header, Summary, SummaryLine, GHCProf};
 
 pub struct UI {
     ui: RustBox,
