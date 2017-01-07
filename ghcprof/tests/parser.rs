@@ -136,6 +136,29 @@ decryptBytes                                      Crypto.RNCryptor.V3.Decrypt   
 }
 
 #[test]
+fn can_parse_rose_tree_1() {
+    match parse_node("MAIN                                                           MAIN                                     559           0    0.3    0.0   100.0  100.0
+ arbitrary                                                     Tests                                   2302           0    0.0    0.0     5.6    3.5
+"
+        .as_bytes(), 0) {
+        IResult::Done(leftover, tree) => {
+            assert_eq!(tree.depth, 0);
+            let ref root = tree.value;
+            assert_eq!(root.cost_centre, "MAIN");
+            let ref child = tree.sub_forest[0];
+            assert_eq!(child.depth, 1);
+            assert!(child.sub_forest.is_empty());
+            assert_eq!(child.value.cost_centre, "arbitrary");
+            assert_eq!("", str::from_utf8(leftover).unwrap());
+        },
+        IResult::Error(Err::Position(_, bytes)) => {
+            panic!("error char -> {:?}", str::from_utf8(bytes))
+        }
+        e => panic!("{:?}", e),
+    }
+}
+
+#[test]
 fn can_parse_extended_summary() {
     match parse_extended_summary("MAIN                                                           MAIN                                     559           0    0.3    0.0   100.0  100.0
  arbitrary                                                     Tests                                   2302           0    0.0    0.0     5.6    3.5

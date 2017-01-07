@@ -200,42 +200,68 @@ enum Descendant {
     Child,
 }
 
-fn peek_next_descendant(input: &[u8], current_depth: usize) -> IResult<&[u8], Descendant> {
-    let (i, next_depth) = try_parse!(input, peek!(node_depth));
-    IResult::Done(i,
-                  // TODO: This is buggy.
-                  match next_depth {
-                      _ if next_depth == current_depth => Descendant::Sibling,
-                      _ if (next_depth == current_depth) && (current_depth == 0) => {
-                          Descendant::Parent
-                      } // the root
-                      _ if next_depth <= current_depth => Descendant::Parent,
-                      _ => Descendant::Child,
-                  })
-}
+// fn peek_next_descendant(input: &[u8], current_depth: usize) -> IResult<&[u8], Descendant> {
+//    let (_, next_depth) = try_parse!(input, peek!(node_depth));
+//    IResult::Done(input,
+//                  match next_depth {
+//                      _ if next_depth == current_depth => Descendant::Sibling,
+//                      _ if next_depth < current_depth => Descendant::Parent,
+//                      _ => Descendant::Child,
+//                  })
+//
 
 /// Parses a top level node of the RoseTree
-fn parse_node(input: &[u8]) -> IResult<&[u8], RoseTree<ExtendedSummaryLine>> {
-    let (i1, depth) = try_parse!(input, node_depth);
-    let (i2, value) = try_parse!(i1, parse_extended_summary_line);
-    // let (i3, next_descendant) = try_parse!(i2, apply!(peek_next_descendant, depth));
+pub fn parse_node(input: &[u8],
+                  current_depth: usize)
+                  -> IResult<&[u8], RoseTree<ExtendedSummaryLine>> {
+    let (i1, value) = try_parse!(input, parse_extended_summary_line);
+    println!("--------> {:?}", value);
+    let (i2, next_depth) = try_parse!(i1, node_depth);
+    println!("--next depth-----> {:?}", next_depth);
+    match next_depth {
+        None => {
+            IResult::Done(i2,
+                          RoseTree {
+                              depth: current_depth,
+                              value: value,
+                              sub_forest: Vec::new(),
+                          })
+        }
+        Some(depth) => {
+            if depth < current_depth {
+                return IResult::Done(i2,
+                                     RoseTree {
+                                         depth: current_depth,
+                                         value: value,
+                                         sub_forest: Vec::new(),
+                                     });
+            }
 
-    let sub_forest = Vec::new();
-    IResult::Done(i2,
-                  RoseTree {
-                      depth: depth,
-                      value: value,
-                      sub_forest: sub_forest,
-                  })
+            let (i3, siblings) = try_parse!(i2, many0!(apply!(parse_node, depth)));
+            IResult::Done(i3,
+                          RoseTree {
+                              depth: current_depth,
+                              value: value,
+                              sub_forest: siblings,
+                          })
+        }
+    }
 }
 
-named!(node_depth<&[u8], usize>,
-       map!(opt!(space), |s: Option<_>| s.map_or(0, |k:&[u8]| k.len()))
-);
-
+fn node_depth(input: &[u8]) -> IResult<&[u8], Option<usize>> {
+    if input.is_empty() {
+        return IResult::Done(input, None);
+    } else {
+        let (l, spc) = try_parse!(input, opt!(space));
+        match spc {
+            None => IResult::Done(l, Some(0)),
+            Some(s) => IResult::Done(l, Some(s.len())),
+        }
+    }
+}
 
 named!(pub parse_extended_summary<&[u8], ExtendedSummary>, do_parse!(
-    trees: many1!(parse_node) >>
+    trees: many1!(apply!(parse_node, 0)) >>
     (ExtendedSummary(trees))
 ));
 
