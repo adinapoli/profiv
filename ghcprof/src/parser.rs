@@ -51,13 +51,13 @@ pub struct ExtendedSummary<'a>(pub RoseTree<ExtendedSummaryLine<'a>>);
 #[derive(Debug, PartialEq)]
 pub struct ExtendedSummaryLine<'a> {
     pub cost_centre: &'a str,
-    module: &'a str,
-    no: u32,
-    entries: u32,
-    individual_time_perc: f32,
-    individual_alloc_perc: f32,
-    inherited_time_perc: f32,
-    inherited_alloc_perc: f32,
+    pub module: &'a str,
+    pub no: u32,
+    pub entries: u32,
+    pub individual_time_perc: f32,
+    pub individual_alloc_perc: f32,
+    pub inherited_time_perc: f32,
+    pub inherited_alloc_perc: f32,
 }
 
 #[derive(Debug, PartialEq)]

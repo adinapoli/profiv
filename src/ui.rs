@@ -177,6 +177,7 @@ fn render_summary<'a>(rustbox: &RustBox, &Summary(ref lines): &Summary<'a>) -> u
 }
 
 fn render_extended_summary<'a>(rustbox: &RustBox, idx: usize, &ExtendedSummary(ref tree): &ExtendedSummary<'a>) {
+    // TODO: This needs to scale according to the size of the longest cost centre. Ditto for module etc.
     normal_line(rustbox, 1, idx + 2, "                                                                                                                          individual     inherited");
     normal_line(rustbox, 1, idx + 3, "COST CENTRE                                                    MODULE                                   no.     entries  %time %alloc   %time %alloc
 ");
@@ -195,5 +196,21 @@ fn render_rose_tree<'a>(rustbox: &RustBox, cursor: &mut (usize, usize), tree: &R
 }
 
 fn render_extended_summary_line<'a>(rustbox: &RustBox, cursor: &mut (usize, usize), line: &ExtendedSummaryLine<'a>) {
-    normal_line(rustbox, cursor.0, cursor.1, line.cost_centre)
+    let cost_centre_len = line.cost_centre.len();
+    let module_len      = line.module.len();
+    let no              = format!("{}", line.no);
+    let entries         = format!("{}", line.entries);
+    let ind_time        = format!("{}", line.individual_time_perc);
+    let ind_alloc       = format!("{}", line.individual_alloc_perc);
+    let inh_time        = format!("{}", line.inherited_time_perc);
+    let inh_alloc       = format!("{}", line.inherited_alloc_perc);
+    normal_line(rustbox, cursor.0, cursor.1, line.cost_centre);
+    // TODO: All hardcoded for now
+    normal_line(rustbox, 64, cursor.1, line.module);
+    normal_line(rustbox, 105, cursor.1, &no);
+    normal_line(rustbox, 113, cursor.1, &entries);
+    normal_line(rustbox, 122, cursor.1, &ind_time);
+    normal_line(rustbox, 128, cursor.1, &ind_alloc);
+    normal_line(rustbox, 137, cursor.1, &inh_time);
+    normal_line(rustbox, 143, cursor.1, &inh_alloc);
 }
