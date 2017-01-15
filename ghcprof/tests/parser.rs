@@ -136,6 +136,53 @@ decryptBytes                                      Crypto.RNCryptor.V3.Decrypt   
 }
 
 #[test]
+fn can_parse_rose_tree_1() {
+    match parse_node("MAIN                                                           MAIN                                     559           0    0.3    0.0   100.0  100.0
+ arbitrary                                                     Tests                                   2302           0    0.0    0.0     5.6    3.5
+"
+        .as_bytes()) {
+        IResult::Done(leftover, tree) => {
+            assert_eq!(tree.depth, 0);
+            let ref root = tree.value;
+            assert_eq!(root.cost_centre, "MAIN");
+            let ref child = tree.sub_forest[0];
+            assert_eq!(child.depth, 1);
+            assert!(child.sub_forest.is_empty());
+            assert_eq!(child.value.cost_centre, "arbitrary");
+            assert_eq!("", str::from_utf8(leftover).unwrap());
+        },
+        IResult::Error(Err::Position(_, bytes)) => {
+            panic!("error char -> {:?}", str::from_utf8(bytes))
+        }
+        e => panic!("{:?}", e),
+    }
+}
+
+#[test]
+fn can_parse_extended_summary() {
+    match parse_extended_summary("MAIN                                                           MAIN                                     559           0    0.3    0.0   100.0  100.0
+ arbitrary                                                     Tests                                   2302           0    0.0    0.0     5.6    3.5
+  arbitrary                                                    Data.ByteString.Arbitrary               2304           0    0.0    0.0     5.6    3.5
+   fastRandBs                                                  Data.ByteString.Arbitrary               2307           0    0.4    1.7     5.6    3.5
+    slowRandBs                                                 Data.ByteString.Arbitrary               2319           0    0.0    0.0     0.0    0.0
+    fastRandBs.preChunks                                       Data.ByteString.Arbitrary               2313         100    0.0    0.0     0.0    0.0
+    fastRandBs.hashes                                          Data.ByteString.Arbitrary               2312         100    5.3    1.7     5.3    1.7
+"
+        .as_bytes()) {
+        IResult::Done(leftover, ExtendedSummary(tree)) => {
+            assert_eq!(tree.depth, 0);
+            let ref line = tree.value;
+            assert_eq!(line.cost_centre, "MAIN");
+            assert_eq!("", str::from_utf8(leftover).unwrap());
+        },
+        IResult::Error(Err::Position(_, bytes)) => {
+            panic!("error char -> {:?}", str::from_utf8(bytes))
+        }
+        e => panic!("{:?}", e),
+    }
+}
+
+#[test]
 fn can_parse_summaries_sep() {
     match parse_summaries_sep("
                                                                                                                           individual     inherited
@@ -192,6 +239,10 @@ fn can_parse_ghc_profile() {
     match parse_prof(profile.as_bytes()) {
         IResult::Done(_, prof) => {
             assert_eq!(prof.header.program, "rncryptor-tests +RTS -p -RTS");
+            let ExtendedSummary(ref tree) = prof.extended_summary;
+            assert_eq!(tree.value.cost_centre, "MAIN");
+            assert_eq!(tree.sub_forest[0].value.cost_centre, "arbitrary");
+            assert_eq!(tree.sub_forest[1].value.cost_centre, "streamingRoundTrip");
         },
         IResult::Error(Err::Position(_, bytes)) => {
             panic!("error char -> {:?}", str::from_utf8(bytes))

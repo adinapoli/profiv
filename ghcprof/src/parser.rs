@@ -7,10 +7,10 @@ use nom::{IResult, Needed, is_space, space, is_digit, line_ending, not_line_endi
 // Rose Tree
 
 #[derive(Debug, PartialEq)]
-struct RoseTree<T> {
-    depth: u32,
-    value: T,
-    sub_forest: Vec<RoseTree<T>>,
+pub struct RoseTree<T> {
+    pub depth: usize,
+    pub value: T,
+    pub sub_forest: Vec<RoseTree<T>>,
 }
 
 #[derive(Debug, PartialEq)]
@@ -46,12 +46,11 @@ pub struct SummaryLine<'a> {
 }
 
 #[derive(Debug, PartialEq)]
-pub struct ExtendedSummary<'a>(Vec<ExtendedSummaryLine<'a>>);
+pub struct ExtendedSummary<'a>(pub RoseTree<ExtendedSummaryLine<'a>>);
 
 #[derive(Debug, PartialEq)]
 pub struct ExtendedSummaryLine<'a> {
-    indentation_level: usize,
-    cost_centre: &'a str,
+    pub cost_centre: &'a str,
     module: &'a str,
     no: u32,
     entries: u32,
@@ -65,7 +64,7 @@ pub struct ExtendedSummaryLine<'a> {
 pub struct GHCProf<'a> {
     pub header: Header<'a>,
     pub summary: Summary<'a>,
-    extended_summary: ExtendedSummary<'a>,
+    pub extended_summary: ExtendedSummary<'a>,
 }
 
 fn is_numlike(chr: u8) -> bool {
@@ -167,39 +166,103 @@ named!(pub parse_summary<&[u8], Summary>, do_parse!(
 ));
 
 named!(pub parse_extended_summary_line<&[u8], ExtendedSummaryLine>, do_parse!(
-    indentation_level: map!(opt!(space), |s: Option<_>| s.map_or(0, |k:&[u8]| k.len())) >>
     cost_centre: map_res!(take_till!(is_space), str::from_utf8) >>
-        space >>
-        module: map_res!(take_till!(is_space), str::from_utf8) >>
-        take_while!(is_space) >>
-        no: parse_num >>
-        take_while!(is_space) >>
-        entries: parse_num >>
-        take_while!(is_space) >>
-        individual_time_perc: parse_num >>
-        take_while!(is_space) >>
-        individual_alloc_perc: parse_num >>
-        take_while!(is_space) >>
-        inherited_time_perc: parse_num >>
-        take_while!(is_space) >>
-        inherited_alloc_perc: parse_num >>
-        line_ending >>
-        (ExtendedSummaryLine{
-            indentation_level: indentation_level,
-            cost_centre: cost_centre,
-            module: module,
-            no: no,
-            entries: entries,
-            individual_time_perc:  individual_time_perc,
-            individual_alloc_perc: individual_alloc_perc,
-            inherited_time_perc:  inherited_time_perc,
-            inherited_alloc_perc: inherited_alloc_perc,
-        })
+    space >>
+    module: map_res!(take_till!(is_space), str::from_utf8) >>
+    take_while!(is_space) >>
+    no: parse_num >>
+    take_while!(is_space) >>
+    entries: parse_num >>
+    take_while!(is_space) >>
+    individual_time_perc: parse_num >>
+    take_while!(is_space) >>
+    individual_alloc_perc: parse_num >>
+    take_while!(is_space) >>
+    inherited_time_perc: parse_num >>
+    take_while!(is_space) >>
+    inherited_alloc_perc: parse_num >>
+    line_ending >>
+    (ExtendedSummaryLine{
+        cost_centre: cost_centre,
+        module: module,
+        no: no,
+        entries: entries,
+        individual_time_perc:  individual_time_perc,
+        individual_alloc_perc: individual_alloc_perc,
+        inherited_time_perc:  inherited_time_perc,
+        inherited_alloc_perc: inherited_alloc_perc,
+    })
 ));
 
+/// Parses a top level node of the RoseTree
+pub fn parse_node(input: &[u8]) -> IResult<&[u8], RoseTree<ExtendedSummaryLine>> {
+    let (i1, current_depth_mb) = try_parse!(input, node_depth);
+    let current_depth = current_depth_mb.unwrap_or(0);
+    let (i2, value) = try_parse!(i1, parse_extended_summary_line);
+    let (i3, next_depth) = try_parse!(i2, peek!(node_depth));
+    match next_depth {
+        None => {
+            IResult::Done(i3,
+                          RoseTree {
+                              depth: current_depth,
+                              value: value,
+                              sub_forest: Vec::new(),
+                          })
+        }
+        Some(depth) => {
+            if depth <= current_depth {
+                return IResult::Done(i3,
+                                     RoseTree {
+                                         depth: current_depth,
+                                         value: value,
+                                         sub_forest: Vec::new(),
+                                     });
+            }
+
+            // If we reached this point it means depth >= current_depth
+
+            let (i4, (siblings, _)) =
+                try_parse!(i3, many_till!(parse_node, |i| minor_depth(i, current_depth) ));
+            IResult::Done(i4,
+                          RoseTree {
+                              depth: current_depth,
+                              value: value,
+                              sub_forest: siblings,
+                          })
+        }
+    }
+}
+
+fn node_depth(input: &[u8]) -> IResult<&[u8], Option<usize>> {
+    if input.is_empty() {
+        return IResult::Done(input, None);
+    } else {
+        let (l, spc) = try_parse!(input, opt!(space));
+        match spc {
+            None => IResult::Done(l, Some(0)),
+            Some(s) => IResult::Done(l, Some(s.len())),
+        }
+    }
+}
+
+fn minor_depth(input: &[u8], current_depth: usize) -> IResult<&[u8], ()> {
+    let (_, next_depth) = try_parse!(input, peek!(node_depth));
+    match next_depth {
+        None => return IResult::Done(input, ()),
+        Some(d) => {
+            if d <= current_depth {
+                return IResult::Done(input, ());
+            } else {
+                return IResult::Incomplete(Needed::Size(2));
+            }
+        }
+    }
+}
+
+
 named!(pub parse_extended_summary<&[u8], ExtendedSummary>, do_parse!(
-    lines: many1!(parse_extended_summary_line) >>
-    (ExtendedSummary(lines))
+    tree: parse_node >>
+    (ExtendedSummary(tree))
 ));
 
 named!(pub parse_summaries_sep<&[u8], ()>, do_parse!(

@@ -1,7 +1,8 @@
 extern crate rustbox;
+extern crate ghcprof;
 
 use self::rustbox::{Style, RustBox, Color, Key};
-use parser::{Header, Summary, SummaryLine, GHCProf};
+use ghcprof::parser::{Header, Summary, ExtendedSummary, ExtendedSummaryLine, RoseTree, SummaryLine, GHCProf};
 
 pub struct UI {
     ui: RustBox,
@@ -23,7 +24,8 @@ impl UI {
     pub fn render_loop<'a>(&self, prof: GHCProf<'a>) {
         let ref rustbox = self.ui;
         render_header(rustbox, &prof.header);
-        render_summary(rustbox, &prof.summary);
+        let cursor = render_summary(rustbox, &prof.summary);
+        render_extended_summary(rustbox, cursor, &prof.extended_summary);
         loop {
             rustbox.present();
             match rustbox.poll_event(false) {
@@ -113,7 +115,7 @@ fn styled_line(rustbox: &RustBox, x: usize, y: usize, temp: &Temperature, str: &
     rustbox.print(x, y, temp.to_style(), Color::White, Color::Default, str);
 }
 
-fn render_summary<'a>(rustbox: &RustBox, &Summary(ref lines): &Summary<'a>) {
+fn render_summary<'a>(rustbox: &RustBox, &Summary(ref lines): &Summary<'a>) -> usize {
     normal_line(rustbox, 1, 8, "COST CENTRE");
 
     // Computes all the slacks to render the summary in a tabulated style.
@@ -170,4 +172,28 @@ fn render_summary<'a>(rustbox: &RustBox, &Summary(ref lines): &Summary<'a>) {
                   &format!("{}", line.alloc_perc));
         idx += 1
     }
+
+    idx
+}
+
+fn render_extended_summary<'a>(rustbox: &RustBox, idx: usize, &ExtendedSummary(ref tree): &ExtendedSummary<'a>) {
+    normal_line(rustbox, 1, idx + 2, "                                                                                                                          individual     inherited");
+    normal_line(rustbox, 1, idx + 3, "COST CENTRE                                                    MODULE                                   no.     entries  %time %alloc   %time %alloc
+");
+    let cursor = idx + 4;
+    render_rose_tree(rustbox, &mut (1, cursor), &tree)
+}
+
+
+fn render_rose_tree<'a>(rustbox: &RustBox, cursor: &mut (usize, usize), tree: &RoseTree<ExtendedSummaryLine<'a>>) {
+    cursor.1 += 1;
+    cursor.0 = tree.depth + 1;
+    render_extended_summary_line(rustbox, cursor, &tree.value);
+    for t in &tree.sub_forest {
+        render_rose_tree(rustbox, cursor, &t)
+  }
+}
+
+fn render_extended_summary_line<'a>(rustbox: &RustBox, cursor: &mut (usize, usize), line: &ExtendedSummaryLine<'a>) {
+    normal_line(rustbox, cursor.0, cursor.1, line.cost_centre)
 }
