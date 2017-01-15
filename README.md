@@ -11,7 +11,7 @@ plain old .prof file, but on steroid.
 
 ## TODO
 
-- [ ] Parsing of `ExtendedSummaryLine` into a Rose Tree
+- [X] Parsing of `ExtendedSummaryLine` into a Rose Tree
 - [ ] Better error reporting in the parser
 - [ ] Ability to collapse each `Forest`
 - [ ] Ability to diff 2 .prof files
