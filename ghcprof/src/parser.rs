@@ -46,7 +46,7 @@ pub struct SummaryLine<'a> {
 }
 
 #[derive(Debug, PartialEq)]
-pub struct ExtendedSummary<'a>(pub Vec<RoseTree<ExtendedSummaryLine<'a>>>);
+pub struct ExtendedSummary<'a>(pub RoseTree<ExtendedSummaryLine<'a>>);
 
 #[derive(Debug, PartialEq)]
 pub struct ExtendedSummaryLine<'a> {
@@ -64,7 +64,7 @@ pub struct ExtendedSummaryLine<'a> {
 pub struct GHCProf<'a> {
     pub header: Header<'a>,
     pub summary: Summary<'a>,
-    extended_summary: ExtendedSummary<'a>,
+    pub extended_summary: ExtendedSummary<'a>,
 }
 
 fn is_numlike(chr: u8) -> bool {
@@ -194,33 +194,15 @@ named!(pub parse_extended_summary_line<&[u8], ExtendedSummaryLine>, do_parse!(
     })
 ));
 
-enum Descendant {
-    Parent,
-    Sibling,
-    Child,
-}
-
-// fn peek_next_descendant(input: &[u8], current_depth: usize) -> IResult<&[u8], Descendant> {
-//    let (_, next_depth) = try_parse!(input, peek!(node_depth));
-//    IResult::Done(input,
-//                  match next_depth {
-//                      _ if next_depth == current_depth => Descendant::Sibling,
-//                      _ if next_depth < current_depth => Descendant::Parent,
-//                      _ => Descendant::Child,
-//                  })
-//
-
 /// Parses a top level node of the RoseTree
-pub fn parse_node(input: &[u8],
-                  current_depth: usize)
-                  -> IResult<&[u8], RoseTree<ExtendedSummaryLine>> {
-    let (i1, value) = try_parse!(input, parse_extended_summary_line);
-    println!("--------> {:?}", value);
-    let (i2, next_depth) = try_parse!(i1, node_depth);
-    println!("--next depth-----> {:?}", next_depth);
+pub fn parse_node(input: &[u8]) -> IResult<&[u8], RoseTree<ExtendedSummaryLine>> {
+    let (i1, current_depth_mb) = try_parse!(input, node_depth);
+    let current_depth = current_depth_mb.unwrap_or(0);
+    let (i2, value) = try_parse!(i1, parse_extended_summary_line);
+    let (i3, next_depth) = try_parse!(i2, peek!(node_depth));
     match next_depth {
         None => {
-            IResult::Done(i2,
+            IResult::Done(i3,
                           RoseTree {
                               depth: current_depth,
                               value: value,
@@ -228,8 +210,8 @@ pub fn parse_node(input: &[u8],
                           })
         }
         Some(depth) => {
-            if depth < current_depth {
-                return IResult::Done(i2,
+            if depth <= current_depth {
+                return IResult::Done(i3,
                                      RoseTree {
                                          depth: current_depth,
                                          value: value,
@@ -237,8 +219,11 @@ pub fn parse_node(input: &[u8],
                                      });
             }
 
-            let (i3, siblings) = try_parse!(i2, many0!(apply!(parse_node, depth)));
-            IResult::Done(i3,
+            // If we reached this point it means depth >= current_depth
+
+            let (i4, (siblings, _)) =
+                try_parse!(i3, many_till!(parse_node, |i| minor_depth(i, current_depth) ));
+            IResult::Done(i4,
                           RoseTree {
                               depth: current_depth,
                               value: value,
@@ -260,9 +245,24 @@ fn node_depth(input: &[u8]) -> IResult<&[u8], Option<usize>> {
     }
 }
 
+fn minor_depth(input: &[u8], current_depth: usize) -> IResult<&[u8], ()> {
+    let (_, next_depth) = try_parse!(input, peek!(node_depth));
+    match next_depth {
+        None => return IResult::Done(input, ()),
+        Some(d) => {
+            if d < current_depth {
+                return IResult::Done(input, ());
+            } else {
+                return IResult::Incomplete(Needed::Size(2));
+            }
+        }
+    }
+}
+
+
 named!(pub parse_extended_summary<&[u8], ExtendedSummary>, do_parse!(
-    trees: many1!(apply!(parse_node, 0)) >>
-    (ExtendedSummary(trees))
+    tree: parse_node >>
+    (ExtendedSummary(tree))
 ));
 
 named!(pub parse_summaries_sep<&[u8], ()>, do_parse!(

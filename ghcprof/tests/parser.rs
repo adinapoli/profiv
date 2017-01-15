@@ -140,7 +140,7 @@ fn can_parse_rose_tree_1() {
     match parse_node("MAIN                                                           MAIN                                     559           0    0.3    0.0   100.0  100.0
  arbitrary                                                     Tests                                   2302           0    0.0    0.0     5.6    3.5
 "
-        .as_bytes(), 0) {
+        .as_bytes()) {
         IResult::Done(leftover, tree) => {
             assert_eq!(tree.depth, 0);
             let ref root = tree.value;
@@ -169,9 +169,9 @@ fn can_parse_extended_summary() {
     fastRandBs.hashes                                          Data.ByteString.Arbitrary               2312         100    5.3    1.7     5.3    1.7
 "
         .as_bytes()) {
-        IResult::Done(leftover, ExtendedSummary(trees)) => {
-            assert_eq!(trees[0].depth, 0);
-            let ref line = trees[0].value;
+        IResult::Done(leftover, ExtendedSummary(tree)) => {
+            assert_eq!(tree.depth, 0);
+            let ref line = tree.value;
             assert_eq!(line.cost_centre, "MAIN");
             assert_eq!("", str::from_utf8(leftover).unwrap());
         },
@@ -239,6 +239,10 @@ fn can_parse_ghc_profile() {
     match parse_prof(profile.as_bytes()) {
         IResult::Done(_, prof) => {
             assert_eq!(prof.header.program, "rncryptor-tests +RTS -p -RTS");
+            let ExtendedSummary(ref tree) = prof.extended_summary;
+            assert_eq!(tree.value.cost_centre, "MAIN");
+            assert_eq!(tree.sub_forest[0].value.cost_centre, "arbitrary");
+            assert_eq!(tree.sub_forest[1].value.cost_centre, "streamingRoundtrip");
         },
         IResult::Error(Err::Position(_, bytes)) => {
             panic!("error char -> {:?}", str::from_utf8(bytes))
