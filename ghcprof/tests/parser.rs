@@ -242,7 +242,7 @@ fn can_parse_ghc_profile() {
             let ExtendedSummary(ref tree) = prof.extended_summary;
             assert_eq!(tree.value.cost_centre, "MAIN");
             assert_eq!(tree.sub_forest[0].value.cost_centre, "arbitrary");
-            assert_eq!(tree.sub_forest[1].value.cost_centre, "streamingRoundtrip");
+            assert_eq!(tree.sub_forest[1].value.cost_centre, "streamingRoundTrip");
         },
         IResult::Error(Err::Position(_, bytes)) => {
             panic!("error char -> {:?}", str::from_utf8(bytes))

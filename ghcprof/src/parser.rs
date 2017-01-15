@@ -250,7 +250,7 @@ fn minor_depth(input: &[u8], current_depth: usize) -> IResult<&[u8], ()> {
     match next_depth {
         None => return IResult::Done(input, ()),
         Some(d) => {
-            if d < current_depth {
+            if d <= current_depth {
                 return IResult::Done(input, ());
             } else {
                 return IResult::Incomplete(Needed::Size(2));
