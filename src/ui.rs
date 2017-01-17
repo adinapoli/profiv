@@ -209,8 +209,8 @@ fn render_extended_summary_line<'a>(rustbox: &RustBox, cursor: &mut (usize, usiz
     normal_line(rustbox, 64, cursor.1, line.module);
     normal_line(rustbox, 105, cursor.1, &no);
     normal_line(rustbox, 113, cursor.1, &entries);
-    normal_line(rustbox, 122, cursor.1, &ind_time);
-    normal_line(rustbox, 128, cursor.1, &ind_alloc);
-    normal_line(rustbox, 137, cursor.1, &inh_time);
-    normal_line(rustbox, 143, cursor.1, &inh_alloc);
+    heat_line(rustbox, 122, cursor.1, &Temperature::from(line.individual_time_perc), &ind_time);
+    heat_line(rustbox, 128, cursor.1, &Temperature::from(line.individual_alloc_perc), &ind_alloc);
+    heat_line(rustbox, 137, cursor.1, &Temperature::from(line.inherited_time_perc), &inh_time);
+    heat_line(rustbox, 143, cursor.1, &Temperature::from(line.inherited_alloc_perc), &inh_alloc);
 }
