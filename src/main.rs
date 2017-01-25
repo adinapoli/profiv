@@ -4,7 +4,8 @@ extern crate ghcprof;
 mod cli;
 mod ui;
 
-use ui::UI;
+use ui::{UI};
+use ui::types::{UIError};
 use ghcprof::parser::parse_prof_file;
 use std::fs::File;
 use std::io::prelude::*;
@@ -14,7 +15,7 @@ use std::process;
 enum AppError {
     CliError(cli::CliParseError),
     IOError(std::io::Error),
-    UIError(ui::UIError),
+    UIError(UIError),
 }
 
 impl From<std::io::Error> for AppError {
@@ -23,8 +24,8 @@ impl From<std::io::Error> for AppError {
     }
 }
 
-impl From<ui::UIError> for AppError {
-    fn from(err: ui::UIError) -> AppError {
+impl From<UIError> for AppError {
+    fn from(err: UIError) -> AppError {
         AppError::UIError(err)
     }
 }
