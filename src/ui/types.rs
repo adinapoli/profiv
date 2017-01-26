@@ -29,21 +29,29 @@ impl UserCursor {
     }
 
     pub fn bg(&self, x: usize, y: usize) -> Color {
-        let UserCursor { x: ux, y: uy } = *self;
-        if x == ux && y == uy {
+        self.bg_or(Color::Default, x, y)
+    }
+
+    pub fn bg_or(&self, default: Color, _: usize, y: usize) -> Color {
+        let UserCursor { x: _, y: uy } = *self;
+        if y == uy {
             return Color::White;
         } else {
-            return Color::Default;
+            return default;
+        }
+    }
+
+    pub fn fg_or(&self, default: Color, _: usize, y: usize) -> Color {
+        let UserCursor { x: _, y: uy } = *self;
+        if y == uy {
+            return Color::Black;
+        } else {
+            return default;
         }
     }
 
     pub fn fg(&self, x: usize, y: usize) -> Color {
-        let UserCursor { x: ux, y: uy } = *self;
-        if x == ux && y == uy {
-            return Color::Black;
-        } else {
-            return Color::White;
-        }
+        self.fg_or(Color::White, x, y)
     }
 }
 

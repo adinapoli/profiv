@@ -32,10 +32,8 @@ impl UI {
             draw_cursor: draw_cursor,
         };
 
-        render_header(&ctx, &prof.header);
-        let cursor = render_summary(&ctx, &prof.summary);
-        render_extended_summary(&ctx, cursor, &prof.extended_summary);
         loop {
+            render(&ctx, &prof);
             rustbox.present();
             match rustbox.poll_event(false) {
                 Ok(rustbox::Event::KeyEvent(key)) => {
@@ -63,6 +61,12 @@ impl UI {
             }
         }
     }
+}
+
+fn render<'a>(ctx: &TuiContext<RustBox>, prof: &GHCProf<'a>) {
+        render_header(&ctx, &prof.header);
+        let cursor = render_summary(&ctx, &prof.summary);
+        render_extended_summary(&ctx, cursor, &prof.extended_summary);
 }
 
 fn render_header<'a>(ctx: &TuiContext<RustBox>, header: &Header<'a>) {
@@ -120,18 +124,18 @@ fn render_summary<'a>(ctx: &TuiContext<RustBox>, &Summary(ref lines): &Summary<'
         let memory_temp = Temperature::from(memory);
         let combined_temp = Temperature::append(&time_temp, &memory_temp);
 
-        styled_line(ctx.ui, 1, idx, &combined_temp, line.cost_centre);
-        styled_line(ctx.ui,
+        styled_line(ctx, 1, idx, &combined_temp, line.cost_centre);
+        styled_line(ctx,
                     cc_len + cc_slack + 2,
                     idx,
                     &combined_temp,
                     line.module);
-        heat_line(ctx.ui,
+        heat_line(ctx,
                   cc_len + cc_slack + mo_slack + mo_len + 4,
                   idx,
                   &time_temp,
                   &tm_str);
-        heat_line(ctx.ui,
+        heat_line(ctx,
                   cc_len + cc_slack + mo_slack + mo_len + tm_slack + tm_len + 6,
                   idx,
                   &memory_temp,
@@ -175,8 +179,8 @@ fn render_extended_summary_line<'a>(ctx: &TuiContext<RustBox>, cursor: &Cursor, 
     normal_line(ctx, 64, cursor.y, line.module);
     normal_line(ctx, 105, cursor.y, &no);
     normal_line(ctx, 113, cursor.y, &entries);
-    heat_line(ctx.ui, 122, cursor.y, &Temperature::from(line.individual_time_perc), &ind_time);
-    heat_line(ctx.ui, 128, cursor.y, &Temperature::from(line.individual_alloc_perc), &ind_alloc);
-    heat_line(ctx.ui, 137, cursor.y, &Temperature::from(line.inherited_time_perc), &inh_time);
-    heat_line(ctx.ui, 143, cursor.y, &Temperature::from(line.inherited_alloc_perc), &inh_alloc);
+    heat_line(ctx, 122, cursor.y, &Temperature::from(line.individual_time_perc), &ind_time);
+    heat_line(ctx, 128, cursor.y, &Temperature::from(line.individual_alloc_perc), &ind_alloc);
+    heat_line(ctx, 137, cursor.y, &Temperature::from(line.inherited_time_perc), &inh_time);
+    heat_line(ctx, 143, cursor.y, &Temperature::from(line.inherited_alloc_perc), &inh_alloc);
 }

@@ -1,9 +1,9 @@
 extern crate rustbox;
 
 use self::rustbox::{Style, RustBox, Color};
-use ui::types::{TuiContext, UserCursor};
+use ui::types::TuiContext;
 
-pub fn normal_line<'a>(ctx: &'a TuiContext<RustBox>, x: usize, y: usize, str: &str) {
+pub fn normal_line(ctx: &TuiContext<RustBox>, x: usize, y: usize, str: &str) {
     ctx.ui.print(x,
                  y,
                  rustbox::RB_NORMAL,
@@ -12,12 +12,22 @@ pub fn normal_line<'a>(ctx: &'a TuiContext<RustBox>, x: usize, y: usize, str: &s
                  str);
 }
 
-pub fn heat_line(rustbox: &RustBox, x: usize, y: usize, temp: &Temperature, str: &str) {
-    rustbox.print(x, y, temp.to_style(), temp.to_colour(), Color::Default, str);
+pub fn heat_line(ctx: &TuiContext<RustBox>, x: usize, y: usize, temp: &Temperature, str: &str) {
+    ctx.ui.print(x,
+                 y,
+                 temp.to_style(),
+                 ctx.user_cursor.fg_or(temp.to_colour(), x, y),
+                 ctx.user_cursor.bg(x, y),
+                 str);
 }
 
-pub fn styled_line(rustbox: &RustBox, x: usize, y: usize, temp: &Temperature, str: &str) {
-    rustbox.print(x, y, temp.to_style(), Color::White, Color::Default, str);
+pub fn styled_line(ctx: &TuiContext<RustBox>, x: usize, y: usize, temp: &Temperature, str: &str) {
+    ctx.ui.print(x,
+                 y,
+                 temp.to_style(),
+                 ctx.user_cursor.fg(x, y),
+                 ctx.user_cursor.bg(x, y),
+                 str);
 }
 
 pub enum Temperature {
