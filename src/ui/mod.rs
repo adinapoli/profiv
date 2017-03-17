@@ -1,7 +1,8 @@
 extern crate rustbox;
 extern crate ghcprof;
 
-use self::rustbox::{RustBox, Key};
+use self::rustbox::{RustBox, Style, Color, Key};
+use std::cmp::{max};
 use self::types::*;
 use self::style::*;
 use ghcprof::parser::{Header, Summary, ExtendedSummary, ExtendedSummaryLine, RoseTree, SummaryLine, GHCProf};
@@ -23,8 +24,8 @@ impl UI {
 
     pub fn render_loop<'a>(&self, prof: GHCProf<'a>) {
         let ref rustbox = self.ui;
-        let ref mut user_cursor = UserCursor::new(0,0);
-        let ref mut draw_cursor = Cursor::new(1,0);
+        let ref mut user_cursor = UserCursor::new(0,1);
+        let ref mut draw_cursor = Cursor::new(1,1);
 
         let ctx = TuiContext {
             ui: rustbox,
@@ -34,10 +35,35 @@ impl UI {
 
         loop {
             render(&ctx, &prof);
+
+            let status_bar_position = ctx.ui.height() - 1;
+            let viewport = format!("({}, {})", ctx.ui.width(), ctx.ui.height());
+
+            // Render the status-bar and the viewport
+            ctx.ui.print(0, status_bar_position, Style::empty(), Color::Black, Color::Green, viewport.as_str());
+            for i in viewport.len() .. ctx.ui.width() {
+                ctx.ui.print(i, status_bar_position, Style::empty(), Color::Black, Color::Green, " ");
+            }
+
+            // Render the current line number.
+            ctx.ui.print(ctx.ui.width() - 5
+                         , status_bar_position
+                         , Style::empty()
+                         , Color::Black
+                         , Color::Green
+                         , format!("{}", ctx.user_cursor.y).as_str()
+            );
+
             rustbox.present();
             match rustbox.poll_event(false) {
                 Ok(rustbox::Event::KeyEvent(key)) => {
                     match key {
+                        Key::Ctrl('d') => {
+                            println!("scroll down");
+                        }
+                        Key::Ctrl('u') => {
+                            println!("scroll up");
+                        }
                         Key::Char('q') => {
                             break;
                         }
@@ -45,13 +71,7 @@ impl UI {
                             ctx.user_cursor.y += 1;
                         }
                         Key::Up => {
-                            ctx.user_cursor.y -= 1;
-                        }
-                        Key::Left => {
-                            ctx.user_cursor.x -= 1;
-                        }
-                        Key::Right => {
-                            ctx.user_cursor.x += 1;
+                            ctx.user_cursor.y = max(1, ctx.user_cursor.y - 1);
                         }
                         _ => {}
                     }
