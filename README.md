@@ -2,7 +2,7 @@
 Profiv (__pro__ file __v__ isualiser) is a console-based GHC .prof file
 visualiser and parser written in Rust. **It's currently in alpha stage.**
 
-![screen](https://cloud.githubusercontent.com/assets/442035/21699454/b62c8cdc-d393-11e6-8d2a-af57bbaf659e.png)
+![barebone](https://cloud.githubusercontent.com/assets/442035/24157921/16b04a9c-0e5b-11e7-8e08-da5b64d9f091.gif)
 
 ## Why?
 
